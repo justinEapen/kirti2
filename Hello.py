@@ -1,51 +1,65 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022)
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
+import cohere
 import streamlit as st
-from streamlit.logger import get_logger
 
-LOGGER = get_logger(__name__)
+co = cohere.Client('18V1Oo06GAf0xMaXbBjkHlhdHktqbjc5tusZHZMV') # This is your trial API key
+
+st.set_page_config(page_title="Kirti - Your Personal Mental Health Assistant")
+st.title("Mental Health Bot")
+
+preamble_prompt = """You are an AI Mental Health Therapist named "Kirti". You are a mental health therapist chatbot designed to provide empathetic and supportive responses to individuals seeking help with their emotional well-being. Your goal is to create a safe and non-judgmental space for users to express their feelings, thoughts, and concerns. Actively listen, offer thoughtful insights, and provide guidance that encourages self-reflection and positive coping strategies. Keep in mind the importance of maintaining user privacy and confidentiality. If the user expresses thoughts of self-harm or harm to others, prioritize safety by encouraging them to seek professional help or contacting emergency services. Remember to approach each interaction with empathy and respect, fostering a therapeutic environment through your responses. 
+Gather all the necessary information such as name, gender, age category, and any extras they may want to add.
+Ask these questions one after another. DO NOT ASK EVERYTHING AT ONCE. Get the information one at a time.
+If you don't know the answer to any query, just say you don't know. DO NOT try to make up an answer.
+If the question is not related to the context, politely respond that you are tuned to only answer questions that are related to the context."""
 
 
-def run():
-    st.set_page_config(
-        page_title="Hello",
-        page_icon="👋",
+docs = [
+    {
+        "name" : "Mental Health"
+    }
+]
+
+def cohereChat(prompt):
+    llm_response = co.chat(
+        model='command',
+        message=prompt,
+        preamble_override = preamble_prompt,
+        documents=docs,
     )
 
-    st.write("# Welcome to Streamlit! 👋")
+    return llm_response
 
-    st.sidebar.success("Select a demo above.")
+def initialize_state():
+    # Initialize chat history
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
 
-    st.markdown(
-        """
-        Streamlit is an open-source app framework built specifically for
-        Machine Learning and Data Science projects.
-        **👈 Select a demo from the sidebar** to see some examples
-        of what Streamlit can do!
-        ### Want to learn more?
-        - Check out [streamlit.io](https://streamlit.io)
-        - Jump into our [documentation](https://docs.streamlit.io)
-        - Ask a question in our [community
-          forums](https://discuss.streamlit.io)
-        ### See more complex demos
-        - Use a neural net to [analyze the Udacity Self-driving Car Image
-          Dataset](https://github.com/streamlit/demo-self-driving)
-        - Explore a [New York City rideshare dataset](https://github.com/streamlit/demo-uber-nyc-pickups)
-    """
-    )
+def main():
 
+    initialize_state()
+    # Display chat messages from history on app rerun
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+    
+    # React to user input
+    if prompt := st.chat_input("What is up?"):
+        # Display user message in chat message container
+        with st.chat_message("user"):
+            st.markdown(prompt)
+        # Add user message to chat history
+        st.session_state.messages.append({"role": "user", "content": prompt})
 
-if __name__ == "__main__":
-    run()
+        llm_response = cohereChat(prompt)
+
+        response = f"{llm_response.text}"
+        # Display assistant response in chat message container
+        with st.chat_message("assistant"):
+            st.markdown(response)
+        # Add assistant response to chat history
+        st.session_state.messages.append({"role": "assistant", "content": response})
+
+    
+
+if __name__ == "__main__" :
+    main()
